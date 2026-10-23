@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Продажи квартир — интерактивный дашборд</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">ЖК • продажи квартир</div>
+        <h1>Панель продаж</h1>
+        <p class="subtitle">Сделки, непроданный остаток и характеристики квартир</p>
+      </div>
+      <div class="header-meta"><span class="status-dot"></span> Локальный источник • {{ filteredRows.length }} квартир</div>
+    </header>
+
+    <main class="dashboard">
+      <section class="filters panel">
+        <div class="filter-heading"><span class="section-kicker">ФИЛЬТРЫ</span><button class="reset" @click="resetFilters">Сбросить</button></div>
+        <label>Поиск квартиры<input v-model.trim="filters.search" placeholder="Например, А-6-011" /></label>
+        <label>Корпус<select v-model="filters.korpus"><option value="all">Все корпуса</option><option v-for="value in options.korpus" :key="value">{{ value }}</option></select></label>
+        <label>Комнаты<select v-model="filters.komnat"><option value="all">Все</option><option v-for="value in options.komnat" :key="value">{{ value }}</option></select></label>
+        <label>Вид<select v-model="filters.vid"><option value="all">Все виды</option><option v-for="value in options.vid" :key="value">{{ value }}</option></select></label>
+        <label class="range-label">Срок продажи <strong>{{ filters.maxDays }} дн.</strong><input type="range" min="0" :max="bounds.maxDays" v-model.number="filters.maxDays" /></label>
+      </section>
+
+      <section class="kpi-grid">
+        <article class="kpi panel"><span class="kpi-label">Сделок</span><strong>{{ soldRows.length }}</strong><span class="kpi-note">{{ unsoldRows.length }} квартир без сделки</span></article>
+        <article class="kpi panel"><span class="kpi-label">Выручка</span><strong>{{ formatMoney(totalRevenue) }}</strong><span class="kpi-note">сумма сделок после скидки</span></article>
+        <article class="kpi panel"><span class="kpi-label">Средний срок</span><strong>{{ formatNumber(avgDays) }} дн.</strong><span class="kpi-note">от обращения до сделки</span></article>
+        <article class="kpi panel"><span class="kpi-label">Доля проданных</span><strong>{{ formatPercent(sellThrough) }}</strong><span class="kpi-note">от всех квартир в выборке</span></article>
+      </section>
+
+      <section class="panel constellation-panel">
+        <div class="panel-head constellation-head"><div><span class="section-kicker">КАРТА СОЗВЕЗДИЙ СПРОСА</span><h2>Какие квартиры продаются лучше и хуже?</h2><p>Профили отсортированы от лучших к худшим. Заполненная частица — сделка, контур — квартира без сделки.</p></div><div class="particle-legend"><span><i class="particle sold"></i> сделка</span><span><i class="particle stock"></i> нет сделки</span><span><i class="size-key"></i> размер = площадь</span></div></div>
+        <div class="outcome-labels"><span>БЫСТРО · ≤ 7 дней</span><span>НОРМАЛЬНО · 8–14</span><span>ДОЛГО · 15+ дней</span><span>НЕТ СДЕЛКИ</span></div>
+        <div id="constellation-chart" class="constellation-chart"></div>
+        <div class="chart-footnote">Рейтинг учитывает долю проданных квартир, медианный срок и среднюю скидку. Объём профиля виден по количеству частиц.</div>
+      </section>
+
+      <section class="panel table-panel"><div class="panel-head"><div><span class="section-kicker">РЕЕСТР КВАРТИР</span><h2>Сделки и непроданный остаток</h2></div><div class="table-summary">Показано {{ pagedRows.length }} из {{ filteredRows.length }}</div></div>
+        <div class="table-wrap"><table><thead><tr><th>Статус</th><th>Квартира</th><th>Корпус</th><th>Комн.</th><th>Площадь</th><th>Цена за м²</th><th>Сумма сделки</th><th>Скидка</th><th>Дней</th><th>Дата сделки</th><th>Вид</th></tr></thead><tbody><tr v-for="row in pagedRows" :key="row.kvartira"><td><span :class="['status-pill', isSold(row) ? 'is-sold' : 'is-stock']">{{ isSold(row) ? 'Продана' : 'Нет сделки' }}</span></td><td class="strong">{{ row.kvartira }}</td><td>{{ row.korpus }}</td><td>{{ row.komnat }}</td><td>{{ formatNumber(row.ploshchad_m2) }} м²</td><td>{{ formatMoney(row.tsena_za_m2_rub) }}</td><td class="strong">{{ isSold(row) ? formatMoney(row.summa_sdelki_rub) : '—' }}</td><td><span v-if="isSold(row)" :class="['discount-pill', discountTone(row)]">{{ formatPercent(discount(row)) }}</span><span v-else>—</span></td><td>{{ isSold(row) ? row.dney_v_rabote : '—' }}</td><td>{{ formatDate(row.data_sdelki) }}</td><td>{{ row.vid }}</td></tr></tbody></table></div>
+        <div class="pagination"><button @click="page--" :disabled="page === 1">←</button><span>Страница {{ page }} / {{ pageCount }}</span><button @click="page++" :disabled="page === pageCount">→</button></div>
+      </section>
+    </main>
+    <div id="tooltip" class="tooltip"></div>
+  </div>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
